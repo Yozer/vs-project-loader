@@ -24,6 +24,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Xml;
 using System.Text.RegularExpressions;
 using NUnit.Engine.Extensibility;
@@ -42,6 +44,9 @@ namespace NUnit.Engine.Services.ProjectLoaders
     public class VSProject : IProject
     {
         #region Static and Instance Variables
+
+        private const string FiltersFileName = "vs-project-loader.filters";
+        private static readonly Lazy<List<Regex>> ProjectNameFilters = new Lazy<List<Regex>>(LoadFilters);
 
         /// <summary>
         /// VS Project extentions
@@ -167,14 +172,36 @@ namespace NUnit.Engine.Services.ProjectLoaders
 
             foreach (string validExtension in PROJECT_EXTENSIONS)
                 if (extension == validExtension)
-                    return true;
+                    return MatchesFilter(path);
 
             return false;
+        }
+
+        private static bool MatchesFilter(string path)
+        {
+            if (ProjectNameFilters.Value.Count == 0)
+            {
+                return true;
+            }
+
+            return ProjectNameFilters.Value.Any(t => t.IsMatch(path));
         }
 
         public static bool IsSolutionFile(string path)
         {
             return Path.GetExtension(path) == SOLUTION_EXTENSION;
+        }
+
+        private static List<Regex> LoadFilters()
+        {
+            var filtersPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), FiltersFileName);
+            if (!File.Exists(filtersPath))
+            {
+                return new List<Regex>();
+            }
+
+            var filters = File.ReadAllLines(filtersPath).Where(t => !string.IsNullOrEmpty(t));
+            return filters.Select(t => new Regex(t)).ToList();
         }
 
         #endregion

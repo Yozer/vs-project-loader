@@ -87,10 +87,11 @@ namespace NUnit.Engine.Services.ProjectLoaders
         public TestPackage GetTestPackage(string configName)
         {
             var package = new TestPackage(ProjectPath);
+            configName = configName?.ToLower();
 
             foreach (var name in _configs.Keys)
             {
-                if (configName == null || configName == name)
+                if (configName == null || configName == name.ToLower())
                 {
                     var config = _configs[name];
                     foreach (string assembly in config.Assemblies)
